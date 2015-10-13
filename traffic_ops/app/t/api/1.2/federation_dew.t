@@ -22,6 +22,7 @@ use DBI;
 use Schema;
 use strict;
 use warnings;
+use JSON;
 use Test::TestHelper;
 use Fixtures::TmUser;
 use Fixtures::Federation;
@@ -71,29 +72,77 @@ my $ft = Fixtures::FederationTmuser->new($schema_values);
 Test::TestHelper->load_all_fixtures($ft);
 
 ok $t->post_ok( '/login', => form => { u => 'federation', p => Test::TestHelper::FEDERATION_USER_PASSWORD } )->status_is(302)
-  ->or( sub { diag $t->tx->res->content->asset->{content}; } );
+	->or( sub { diag $t->tx->res->content->asset->{content}; } );
 
-$t->get_ok("/internal/api/1.2/federations.json")->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } )
-  ->json_is( "/response/0/deliveryService", "test-ds1" )
-  ->json_is( "/response/0/mappings/0/cname", "cname1." )
-  ->json_is( "/response/0/mappings/0/ttl", "86400" )
-  ->json_is( "/response/0/mappings/0/resolve6/0", "FE80::0202:B3FF:FE1E:8329/128" )
-  ->json_is( "/response/0/mappings/0/resolve4/0", "127.0.0.1/32" )
+ok $t->get_ok("/internal/api/1.2/federations.json")->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } )
+	->json_is( "/response/0/deliveryService", "test-ds1" )->json_is( "/response/0/mappings/0/cname", "cname1." )
+	->json_is( "/response/0/mappings/0/ttl", "86400" )->json_is( "/response/0/mappings/0/resolve6/0", "FE80::0202:B3FF:FE1E:8329/128" )
+	->json_is( "/response/0/mappings/0/resolve4/0", "127.0.0.1/32" )
 
-  ->json_is( "/response/0/deliveryService", "test-ds1" )
-  ->json_is( "/response/0/mappings/1/cname", "cname2." )
-  ->json_is( "/response/0/mappings/1/ttl", "86400" )
+	->json_is( "/response/0/deliveryService", "test-ds1" )->json_is( "/response/0/mappings/1/cname", "cname2." )
+	->json_is( "/response/0/mappings/1/ttl", "86400" )
 
-  ->json_is( "/response/1/deliveryService", "test-ds2" )
-  ->json_is( "/response/1/mappings/0/cname", "cname4." )
-  ->json_is( "/response/1/mappings/0/ttl", "86400" );
+	->json_is( "/response/1/deliveryService", "test-ds2" )->json_is( "/response/1/mappings/0/cname", "cname4." )
+	->json_is( "/response/1/mappings/0/ttl", "86400" ), 'Simple Get';
+
+my $federation_data = {
+	federations => [
+		{
+			deliveryService => "xml_id",
+			mappings        => [
+				{
+					cname    => "cname.",
+					ttl      => 60,
+					resolve4 => ["127.0.0.1/24"],
+					resolve6 => [ "2001:558:6010::/48", "2001:558:1018:6::/64" ],
+				}
+			],
+
+		}
+	],
+};
+
+my $federation_json = encode_json($federation_data);
+diag( "federation_json #-> " . Dumper($federation_json) );
+
+#$t->post_ok("/api/1.2/federations")->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } );
+
+ok $t->post_ok( '/api/1.2/federations', json => $federation_json )->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } ),
+	'Valid POST';
+
+$federation_data = {
+	federations => [
+		{
+			deliveryService => "xml_id",
+			mappings        => [
+				{
+					cname    => "cname",
+					ttl      => 60,
+					resolve4 => ["127.0.0.1/24"],
+					resolve6 => [ "2001:558:6010::/48", "2001:558:1018:6::/64" ],
+				}
+			],
+
+		}
+	],
+};
+
+$federation_json = encode_json($federation_data);
+diag( "federation_json #-> " . Dumper($federation_json) );
+
+#$t->post_ok("/api/1.2/federations")->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } );
+
+ok $t->post_ok( '/api/1.2/federations', json => $federation_json )->status_is(400)->or( sub { diag $t->tx->res->content->asset->{content}; } ),
+	'CNAME without ending period';
+
+#ok $t->post_ok( "/api/1.2/federations", json => {} )->status_is(400)->or( sub { diag $t->tx->res->content->asset->{content}; } ), 'POST with no data';
 
 ok $t->get_ok('/logout')->status_is(302)->or( sub { diag $t->tx->res->content->asset->{content}; } );
 
-Test::TestHelper->teardown( $schema, 'Federation' );
-Test::TestHelper->teardown( $schema, 'FederationDeliveryservice' );
-Test::TestHelper->teardown( $schema, 'FederationFederationResolver' );
-Test::TestHelper->teardown( $schema, 'FederationResolver' );
+#Test::TestHelper->teardown( $schema, 'Federation' );
+#Test::TestHelper->teardown( $schema, 'FederationDeliveryservice' );
+#Test::TestHelper->teardown( $schema, 'FederationFederationResolver' );
+#Test::TestHelper->teardown( $schema, 'FederationResolver' );
 
 $dbh->disconnect();
 done_testing();
