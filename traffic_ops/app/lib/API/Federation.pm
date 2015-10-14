@@ -163,14 +163,10 @@ sub add {
 	}
 	my @errors      = $self->validate_schema();
 	my $error_count = scalar @errors;
-	$self->app->log->debug( "RETURNED count #-> " . $error_count );
-	$self->app->log->debug( "RETURNED errors #-> " . Dumper(@errors) );
 	if ( $error_count > 0 ) {
 		my $vh = new Utils::Helper::ValidationHelper();
 
 		my $alerts = $vh->validation_errors_to_alerts( \@errors );
-		$self->app->log->debug( "alerts type#-> " . $alerts );
-		$self->app->log->debug( "alerts #-> " . Dumper($alerts) );
 		return $self->alert($alerts);
 	}
 	else {
@@ -209,21 +205,16 @@ sub validate_schema {
 	my $json;
 	my @errors;
 	try {
-		$self->app->log->debug( "json #-> " . Dumper($json) );
 		$json = decode_json($json_request);
-		$self->app->log->debug( "json after #-> " . Dumper($json) );
 		my $v                = JSON::Validator->new;
 		my $sh               = new Utils::Helper::SchemaHelper();
 		my $schema_file_path = $sh->find_schema( 'v12', 'Federation.json' );
-		$self->app->log->debug( "schema_file_path #-> " . $schema_file_path );
 		$v->schema($schema_file_path);
 
 		@errors = $v->validate($json);
-		$self->app->log->debug( "SCHEMA RESPONSE errors #-> " . Dumper(@errors) );
 	}
 	catch {
 		push( @errors, { message => $_->message } );
-		$self->app->log->debug( "JSON Parsing error #-> " . Dumper(@errors) );
 	};
 	return @errors;
 

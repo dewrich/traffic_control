@@ -106,33 +106,18 @@ my $federation_json = encode_json($federation_data);
 
 #diag( "federation_json #-> " . Dumper($federation_json) );
 
-#$t->post_ok("/api/1.2/federations")->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } );
-
 ok $t->post_ok( '/api/1.2/federations', json => $federation_json )->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } ),
 	'Valid POST';
 
-$federation_data = {
-	federations => [
-		{
-			deliveryService => "xml_id",
-			mappings        => [
-				{
-					cname    => "cname",
-					ttl      => 2,
-					resolve4 => ["127.0.0.1/24"],
-					resolve6 => [ "2001:558:6010::/48", "2001:558:1018:6::/64" ],
-				}
-			],
-
-		}
-	],
-};
-
-$federation_json = encode_json($federation_data);
 diag( "federation_json #-> " . Dumper($federation_json) );
 
-#$t->post_ok("/api/1.2/federations")->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } );
+# Verify
+$federation_data->{federations}->[0]->{mappings}->[0]->{ttl} = 2;
+$federation_json = encode_json($federation_data);
+ok $t->post_ok( '/api/1.2/federations', json => $federation_json )->status_is(400)->or( sub { diag $t->tx->res->content->asset->{content}; } ), 'ttl > 60';
 
+$federation_data->{federations}->[0]->{mappings}->[0]->{cname} = "cname";
+$federation_json = encode_json($federation_data);
 ok $t->post_ok( '/api/1.2/federations', json => $federation_json )->status_is(400)->or( sub { diag $t->tx->res->content->asset->{content}; } ),
 	'CNAME without ending period';
 
@@ -140,6 +125,7 @@ ok $t->post_ok( "/api/1.2/federations", json => undef )->status_is(400)->or( sub
 	->json_is( "/alerts/0/text", "malformed JSON string, neither tag, array, object, number, string or atom, at character of...\n" ),
 	'BAD POST with no data';
 
+ok $t->post_ok("/api/1.2/federations")->status_is(400)->or( sub { diag $t->tx->res->content->asset->{content}; } ), 'BAD POST with no JSON data';
 ok $t->get_ok('/logout')->status_is(302)->or( sub { diag $t->tx->res->content->asset->{content}; } );
 
 #Test::TestHelper->teardown( $schema, 'Federation' );
