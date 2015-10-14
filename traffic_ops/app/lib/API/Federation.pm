@@ -161,17 +161,16 @@ sub add {
 	if ( !defined $user ) {
 		return $self->alert("You must be an Federation user to perform this operation!");
 	}
-	my @errors      = $self->is_valid_schema();
+	my @errors      = $self->validate_schema();
 	my $error_count = scalar @errors;
-	$self->app->log->debug( "error_count #-> " . $error_count );
-	$self->app->log->debug( "errors #-> " . Dumper(@errors) );
+	$self->app->log->debug( "RETURNED count #-> " . $error_count );
+	$self->app->log->debug( "RETURNED errors #-> " . Dumper(@errors) );
 	if ( $error_count > 0 ) {
-		my $vh     = new Utils::Helper::ValidationHelper();
-		my $alerts = $vh->validation_errors_to_alerts(@errors);
+		my $vh = new Utils::Helper::ValidationHelper();
+
+		my $alerts = $vh->validation_errors_to_alerts( \@errors );
 		$self->app->log->debug( "alerts type#-> " . $alerts );
 		$self->app->log->debug( "alerts #-> " . Dumper($alerts) );
-		my $alert_response = $self->alert($alerts);
-		$self->app->log->debug( "alert_response #-> " . Dumper($alert_response) );
 		return $self->alert($alerts);
 	}
 	else {
@@ -203,7 +202,7 @@ sub add_federation_tmuser {
 	);
 }
 
-sub is_valid_schema {
+sub validate_schema {
 	my $self = shift;
 
 	my $json_request = $self->req->json;
@@ -220,11 +219,10 @@ sub is_valid_schema {
 		$v->schema($schema_file_path);
 
 		@errors = $v->validate($json);
-		$self->app->log->debug( "errors #-> " . Dumper(@errors) );
+		$self->app->log->debug( "SCHEMA RESPONSE errors #-> " . Dumper(@errors) );
 	}
 	catch {
-		my $e = $_;
-		push( @errors, { message => $e->message } );
+		push( @errors, { message => $_->message } );
 		$self->app->log->debug( "JSON Parsing error #-> " . Dumper(@errors) );
 	};
 	return @errors;

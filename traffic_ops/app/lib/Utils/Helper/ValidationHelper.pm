@@ -31,9 +31,11 @@ sub new {
 
 sub validation_errors_to_alerts {
 	my $self   = shift;
-	my @errors = shift;
-	my $alerts;
-	foreach my $error (@errors) {
+	my $errors = shift;
+
+	my $error_count = scalar @$errors;
+	my @alerts;
+	foreach my $error (@$errors) {
 		my $alert;
 
 		if ( defined( $error->{path} ) ) {
@@ -43,10 +45,9 @@ sub validation_errors_to_alerts {
 
 		# trim the message to prevent exposing code line numbers from Perl
 		$message =~ s,^(.{90}).+,$1...,g;
-		$alert->{message} = $message;
-		push( @$alerts, $alert );
+		$alert->{text} = $message;
+		push( @alerts, $alert );
 	}
-	return $alerts;
+	return \@alerts;
 }
-
 1;

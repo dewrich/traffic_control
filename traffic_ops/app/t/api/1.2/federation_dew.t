@@ -103,7 +103,8 @@ my $federation_data = {
 };
 
 my $federation_json = encode_json($federation_data);
-diag( "federation_json #-> " . Dumper($federation_json) );
+
+#diag( "federation_json #-> " . Dumper($federation_json) );
 
 #$t->post_ok("/api/1.2/federations")->status_is(200)->or( sub { diag $t->tx->res->content->asset->{content}; } );
 
@@ -135,8 +136,9 @@ diag( "federation_json #-> " . Dumper($federation_json) );
 ok $t->post_ok( '/api/1.2/federations', json => $federation_json )->status_is(400)->or( sub { diag $t->tx->res->content->asset->{content}; } ),
 	'CNAME without ending period';
 
-#ok $t->post_ok( "/api/1.2/federations", json => undef )->status_is(400)->or( sub { diag $t->tx->res->content->asset->{content}; } )
-#->json_is( "/alerts/1/mappings/0/ttl", "86400" ), 'BAD POST with no data';
+ok $t->post_ok( "/api/1.2/federations", json => undef )->status_is(400)->or( sub { diag $t->tx->res->content->asset->{content}; } )
+	->json_is( "/alerts/0/text", "malformed JSON string, neither tag, array, object, number, string or atom, at character of...\n" ),
+	'BAD POST with no data';
 
 ok $t->get_ok('/logout')->status_is(302)->or( sub { diag $t->tx->res->content->asset->{content}; } );
 
