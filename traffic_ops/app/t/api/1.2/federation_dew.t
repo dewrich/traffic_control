@@ -117,7 +117,7 @@ $federation_data = {
 			mappings        => [
 				{
 					cname    => "cname",
-					ttl      => 60,
+					ttl      => 2,
 					resolve4 => ["127.0.0.1/24"],
 					resolve6 => [ "2001:558:6010::/48", "2001:558:1018:6::/64" ],
 				}
@@ -135,7 +135,8 @@ diag( "federation_json #-> " . Dumper($federation_json) );
 ok $t->post_ok( '/api/1.2/federations', json => $federation_json )->status_is(400)->or( sub { diag $t->tx->res->content->asset->{content}; } ),
 	'CNAME without ending period';
 
-#ok $t->post_ok( "/api/1.2/federations", json => {} )->status_is(400)->or( sub { diag $t->tx->res->content->asset->{content}; } ), 'POST with no data';
+#ok $t->post_ok( "/api/1.2/federations", json => undef )->status_is(400)->or( sub { diag $t->tx->res->content->asset->{content}; } )
+#->json_is( "/alerts/1/mappings/0/ttl", "86400" ), 'BAD POST with no data';
 
 ok $t->get_ok('/logout')->status_is(302)->or( sub { diag $t->tx->res->content->asset->{content}; } );
 

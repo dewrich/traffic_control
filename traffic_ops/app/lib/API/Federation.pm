@@ -22,14 +22,14 @@ use UI::Utils;
 
 use Mojo::Base 'Mojolicious::Controller';
 use Data::Dumper;
-use Cwd;
 use Net::CIDR;
-use File::Find;
-use File::Basename;
 use JSON;
 use JSON::Validator;
 use Validate::Tiny ':all';
+use Utils::Helper::SchemaHelper;
+use Utils::Helper::ValidationHelper;
 use Data::Validate::IP qw(is_ipv4 is_ipv6);
+use Try::Tiny;
 
 sub index {
 	my $self             = shift;
@@ -166,25 +166,17 @@ sub add {
 	$self->app->log->debug( "error_count #-> " . $error_count );
 	$self->app->log->debug( "errors #-> " . Dumper(@errors) );
 	if ( $error_count > 0 ) {
-		my $alerts = $self->to_alerts(@errors);
+		my $vh     = new Utils::Helper::ValidationHelper();
+		my $alerts = $vh->validation_errors_to_alerts(@errors);
+		$self->app->log->debug( "alerts type#-> " . $alerts );
 		$self->app->log->debug( "alerts #-> " . Dumper($alerts) );
+		my $alert_response = $self->alert($alerts);
+		$self->app->log->debug( "alert_response #-> " . Dumper($alert_response) );
 		return $self->alert($alerts);
 	}
 	else {
 		return $self->success("Successfully created federations");
 	}
-}
-
-sub to_alerts {
-	my $self   = shift;
-	my $errors = shift;
-	my $alerts;
-	foreach my $error (@$errors) {
-		my $alert->{path} = $error->{path};
-		$alert->{message} = $error->{message};
-		push( @$alerts, $alert );
-	}
-	return \$alerts;
 }
 
 sub find_tmuser {
@@ -215,38 +207,32 @@ sub is_valid_schema {
 	my $self = shift;
 
 	my $json_request = $self->req->json;
-	my $json         = decode_json($json_request);
+	my $json;
+	my @errors;
+	try {
+		$self->app->log->debug( "json #-> " . Dumper($json) );
+		$json = decode_json($json_request);
+		$self->app->log->debug( "json after #-> " . Dumper($json) );
+		my $v                = JSON::Validator->new;
+		my $sh               = new Utils::Helper::SchemaHelper();
+		my $schema_file_path = $sh->find_schema( 'v12', 'Federation.json' );
+		$self->app->log->debug( "schema_file_path #-> " . $schema_file_path );
+		$v->schema($schema_file_path);
 
-	my $v       = JSON::Validator->new;
-	my $formats = {
-		cidr => sub { validate_cir(@_) }
+		@errors = $v->validate($json);
+		$self->app->log->debug( "errors #-> " . Dumper(@errors) );
+	}
+	catch {
+		my $e = $_;
+		push( @errors, { message => $e->message } );
+		$self->app->log->debug( "JSON Parsing error #-> " . Dumper(@errors) );
 	};
-	$v->formats($formats);
-	my $schema_file = $self->find_schema( 'v12', 'Federation.json' );
-	$v->schema($schema_file);
+	return @errors;
 
-	my @errors = $v->validate($json);
-	return \@errors;
 }
 
 sub validate_cidr {
 	return 'help';
-}
-
-sub find_schema {
-	my $self        = shift;
-	my $version     = shift;
-	my $schema_file = shift;
-	my $pwd         = cwd();
-
-	my $mod_path = __PACKAGE__;
-	$mod_path =~ s,::,/,g;
-	$mod_path = $INC{ $mod_path . '.pm' };
-	my $api_dir = dirname($mod_path);
-	my $schema_file_path = sprintf( "%s/%s/%s/%s", $api_dir, '/Schema', $version, $schema_file );
-
-	$self->app->log->debug( "schema_file_path #-> " . $schema_file_path );
-	return $schema_file_path;
 }
 
 sub is_valid {

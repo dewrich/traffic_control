@@ -250,11 +250,16 @@ sub build_alerts {
 	}
 
 	# If no key/value pair is passed just push out the error message as defined.
+	elsif ( ref($result) eq 'ARRAY' ) {
+
+		my %alert = ( $LEVEL_KEY => $ERROR_LEVEL, $TEXT_KEY => @$result );
+		push( @alerts, \%alert );
+	}
 	else {
 		my %alert = ( $LEVEL_KEY => $ERROR_LEVEL, $TEXT_KEY => $result );
 		push( @alerts, \%alert );
 	}
-	return @alerts;
+	return \@alerts;
 }
 
 1;
