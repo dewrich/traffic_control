@@ -165,10 +165,9 @@ sub add {
 	my $error_count = scalar @errors;
 	$self->app->log->debug( "error_count #-> " . $error_count );
 	$self->app->log->debug( "errors #-> " . Dumper(@errors) );
-	if ( scalar @errors > 0 ) {
+	if ( $error_count > 0 ) {
 		my $alerts = $self->to_alerts(@errors);
 		$self->app->log->debug( "alerts #-> " . Dumper($alerts) );
-
 		return $self->alert($alerts);
 	}
 	else {
@@ -185,7 +184,7 @@ sub to_alerts {
 		$alert->{message} = $error->{message};
 		push( @$alerts, $alert );
 	}
-	return $alerts;
+	return \$alerts;
 }
 
 sub find_tmuser {
