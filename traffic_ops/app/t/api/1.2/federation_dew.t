@@ -116,7 +116,7 @@ $federation_data->{federations}->[0]->{mappings}->[0]->{ttl} = 2;
 $federation_json = encode_json($federation_data);
 ok $t->post_ok( '/api/1.2/federations', json => $federation_json )->status_is(400)->or( sub { diag $t->tx->res->content->asset->{content}; } ), 'ttl > 60';
 
-$federation_data->{federations}->[0]->{mappings}->[0]->{cname} = "cname";
+$federation_data->{federations}->[0]->{mappings}->[0]->{cname} = "cnameXXX";
 $federation_json = encode_json($federation_data);
 ok $t->post_ok( '/api/1.2/federations', json => $federation_json )->status_is(400)->or( sub { diag $t->tx->res->content->asset->{content}; } ),
 	'CNAME without ending period';
