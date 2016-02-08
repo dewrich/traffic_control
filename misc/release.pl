@@ -26,8 +26,8 @@ use File::Find::Rule;
 use File::Path qw(make_path remove_tree);
 
 my $usage = "\n"
-	. "Usage:  $PROGRAM_NAME --gpg-key=[your-signed-key-id] --release-no=[release-to-create]\t\n\n"
-	. "Example:  $PROGRAM_NAME --gpg-key=75AFDE1 --release-no=RELEASE-1.1.0 \n\n"
+	. "Usage:  $PROGRAM_NAME --gpg-key=[your-signed-key-id] --release-no=[release-to-create] <argument>\t\n\n"
+	. "Example:  $PROGRAM_NAME --gpg-key=75AFDE1 --release-no=RELEASE-1.1.0 cut\n\n"
 	. "Purpose:  This script automates the release process for the Traffic Control cdn.\n"
 	. "\nFlags:   \n\n"
 	. "--gpg-key          - Your gpg-key id. ie: 774ACED1\n"
@@ -38,8 +38,7 @@ my $usage = "\n"
 	. "--debug            - (optional) Show debug output\n"
 	. "\nArguments:   \n\n"
 	. "cut        - Cut the release branch, tag the release then make the branch, tag public.\n"
-	. "cleanup    - Reverses the release steps in case you messed up.\n"
-	. "pushdoc    - Upload documentation to the public website.\n";
+	. "cleanup    - Reverses the release steps in case you messed up.\n";
 
 my $git_remote_name = 'official';
 
