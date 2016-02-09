@@ -35,11 +35,10 @@ my $usage = "\n"
 	. "--git-hash         - (optional) The git hash that will be used to reference the release. ie: da4aab57d \n"
 	. "--git-remote-url   - (optional) Overrides the git repo URL where the release will be pulled and sent (mostly for testing). ie: git\@github.com:yourrepo/traffic_control.git \n"
 	. "--dry-run          - (optional) Simulation mode which will NOT apply any changes. \n"
-	. "--debug            - (optional) Show debug output\n"
+	. "--verbose          - (optional) Show verbose output\n"
 	. "\nArguments:   \n\n"
 	. "cut        - Cut the release branch, tag the release then make the branch, tag public.\n"
-	. "cleanup    - Reverses the release steps in case you messed up.\n"
-	. "pushdoc    - Upload documentation to the public website.\n";
+	. "cleanup    - Reverses the release steps in case you messed up.\n";
 
 my $git_remote_name = 'official';
 
@@ -72,7 +71,7 @@ my $branch_exists;
 
 my $rc;
 my $dry_run = 0;
-my $debug   = 0;
+my $verbose = 0;
 my $working_dir;
 
 GetOptions(
@@ -81,7 +80,7 @@ GetOptions(
 	"git-short-hash=s" => \$git_short_hash,
 	"git-remote-url=s" => \$git_remote_url,
 	"dry-run!"         => \$dry_run,
-	"debug!"           => \$debug
+	"verbose!"         => \$verbose
 );
 
 #TODO: drichardson - Preflight check for commands 'git', 's3cmd' , '
@@ -135,9 +134,13 @@ exit(0);
 
 sub fetch_branch {
 
-	clone_repo_to_tmp();
+	if ( !valid_args() ) {
+		exit(0);
+	}
 
 	parse_variables();
+	clone_repo_to_tmp();
+
 	chdir $working_dir;
 	( $rc, $branch_exists ) = check_branch_exists();
 
@@ -241,7 +244,19 @@ sub parse_variables {
 	my $next_minor = $minor + 1;
 	$next_version = sprintf( "%s.%s.%s", $major, $next_minor, $patch );
 	$new_branch = sprintf( "%s.%s.x", $major, $minor );
+}
 
+sub valid_args {
+	my $is_valid = 1;
+	if ( !defined($release_no) ) {
+		print "--release-no flag is required\n";
+		$is_valid = 0;
+	}
+	if ( !defined($release_no) ) {
+		print "--gpg-key flag is required\n";
+		$is_valid = 0;
+	}
+	return $is_valid;
 }
 
 sub add_official_remote {
@@ -298,7 +313,7 @@ sub tag_and_push {
 
 sub cleanup_release {
 
-	if ($debug) {
+	if ($verbose) {
 		print "gpg_key #-> (" . $gpg_key . ")\n";
 		print "release_no #-> (" . $release_no . ")\n";
 		print "dry_run #-> (" . $dry_run . ")\n";
@@ -394,7 +409,7 @@ sub run_and_capture_command {
 		return 0;
 	}
 	else {
-		if ($debug) {
+		if ($verbose) {
 			print "Capturing COMMAND> " . $cmd . "\n\n";
 		}
 		my $cmd_output = `$cmd </dev/null`;
@@ -411,7 +426,7 @@ sub run_command {
 		return 0;
 	}
 	else {
-		if ($debug) {
+		if ($verbose) {
 			print "Executing COMMAND> " . $cmd . "\n\n";
 		}
 		system($cmd);
