@@ -25,8 +25,9 @@ use Data::Dumper;
 use Common::ReturnCodes qw(SUCCESS ERROR);
 
 sub index {
-	my $self = shift;
-	my $format = $self->param("format") || "";
+	my $self     = shift;
+	my $cdn_name = $self->param("cdn") || "";
+	my $format   = $self->param("format") || "";
 
 	my $rs;
 	if ( &is_privileged($self) ) {
