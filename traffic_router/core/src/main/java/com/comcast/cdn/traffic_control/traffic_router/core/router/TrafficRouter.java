@@ -44,7 +44,6 @@ import org.springframework.context.ApplicationContext;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Zone;
 
-import com.comcast.cdn.traffic_control.traffic_router.core.TrafficRouterException;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.Cache;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheLocation;
 import com.comcast.cdn.traffic_control.traffic_router.core.cache.CacheRegister;
@@ -95,7 +94,7 @@ public class TrafficRouter {
 			final GeolocationService geolocationService6, 
 			final StatTracker statTracker,
 			final TrafficOpsUtils trafficOpsUtils,
-			final FederationRegistry federationRegistry) throws IOException, JSONException, TrafficRouterException {
+			final FederationRegistry federationRegistry) throws IOException, JSONException {
 		this.cacheRegister = cr;
 		this.geolocationService = geolocationService;
 		this.geolocationService6 = geolocationService6;
@@ -430,7 +429,7 @@ public class TrafficRouter {
 	}
 
 	private List<Cache> selectCachesByCZ(final DeliveryService ds, final CacheLocation cacheLocation, final Track track) {
-		if (cacheLocation == null || !ds.isLocationAvailable(cacheLocation)) {
+		if (cacheLocation == null || ds == null || !ds.isLocationAvailable(cacheLocation)) {
 			return null;
 		}
 
@@ -447,18 +446,9 @@ public class TrafficRouter {
 	public HTTPRouteResult route(final HTTPRequest request, final Track track) throws MalformedURLException, GeolocationException {
 		track.setRouteType(RouteType.HTTP, request.getHostname());
 
-		final String xtcSteeringOption = request.getHeaderValue(XTC_STEERING_OPTION);
-		final DeliveryService deliveryService = consistentHashDeliveryService(cacheRegister.getDeliveryService(request, true), request.getPath(), xtcSteeringOption);
+		final DeliveryService deliveryService = getDeliveryService(request, track);
 
 		if (deliveryService == null) {
-			track.setResult(ResultType.DS_MISS);
-			track.setResultDetails(ResultDetails.DS_NOT_FOUND);
-			return null;
-		}
-
-		if (request.isSecure() && !deliveryService.isSslEnabled()) {
-			track.setResult(ResultType.ERROR);
-			track.setResultDetails(ResultDetails.DS_NOT_FOUND);
 			return null;
 		}
 
@@ -497,6 +487,30 @@ public class TrafficRouter {
 		final String uriString = deliveryService.createURIString(request, cache);
 		routeResult.setUrl(new URL(uriString));
 		return routeResult;
+	}
+
+	private DeliveryService getDeliveryService(final HTTPRequest request, final Track track) {
+		final String xtcSteeringOption = request.getHeaderValue(XTC_STEERING_OPTION);
+		final DeliveryService deliveryService = consistentHashDeliveryService(cacheRegister.getDeliveryService(request, true), request.getPath(), xtcSteeringOption);
+
+		if (deliveryService == null) {
+			track.setResult(ResultType.DS_MISS);
+			track.setResultDetails(ResultDetails.DS_NOT_FOUND);
+			return null;
+		}
+
+		if (request.isSecure() && !deliveryService.isSslEnabled()) {
+			track.setResult(ResultType.ERROR);
+			track.setResultDetails(ResultDetails.DS_NOT_FOUND);
+			return null;
+		}
+
+		if (!request.isSecure() && !deliveryService.isAcceptHttp()) {
+			track.setResult(ResultType.ERROR);
+			track.setResultDetails(ResultDetails.DS_NOT_FOUND);
+			return null;
+		}
+		return deliveryService;
 	}
 
 	protected NetworkNode getNetworkNode(final String ip) {
